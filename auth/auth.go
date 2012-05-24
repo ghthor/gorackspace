@@ -73,11 +73,10 @@ func (a AuthFaultError) Error() string {
 }
 
 // TODO: Cache Auth tokens until they expire
-// TODO: Enable access to the ServiceCatalog
-func GetAuthToken(credentials Credentials) (AuthToken, error) {
+func Authenticate(credentials Credentials) (*Auth, error) {
 	credsJson, err := json.Marshal(AuthRequest{credentials})
 	if err != nil {
-		return AuthToken{}, err
+		return nil, err
 	}
 
 	// Create Request
@@ -87,7 +86,7 @@ func GetAuthToken(credentials Credentials) (AuthToken, error) {
 	// Request
 	resp, err := rackspace.Client.Do(req)
 	if err != nil {
-		return AuthToken{}, err
+		return nil, err
 	}
 
 	responseBody, _ := ioutil.ReadAll(resp.Body)
@@ -96,7 +95,7 @@ func GetAuthToken(credentials Credentials) (AuthToken, error) {
 	default:
 		fallthrough
 	case 401, 403, 400, 500, 503:
-		return AuthToken{}, AuthFaultError{resp.StatusCode, string(responseBody)}
+		return nil, AuthFaultError{resp.StatusCode, string(responseBody)}
 	case 200, 203:
 	}
 
@@ -105,8 +104,8 @@ func GetAuthToken(credentials Credentials) (AuthToken, error) {
 	// Parse Response Body
 	err = json.Unmarshal(responseBody, authResponse)
 	if err != nil {
-		return AuthToken{}, err
+		return nil, err
 	}
 
-	return authResponse.Auth.AuthToken, nil
+	return &authResponse.Auth, nil
 }
