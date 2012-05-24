@@ -2,9 +2,9 @@ package auth
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	rackspace "github.com/ghthor/gorackspace"
 	"io/ioutil"
 	"net/http"
 )
@@ -72,12 +72,6 @@ func (a AuthFaultError) Error() string {
 	return fmt.Sprintf("%i: %s", a.Code, a.Response)
 }
 
-var client *http.Client = &http.Client{
-	Transport: &http.Transport{
-		TLSClientConfig: &tls.Config{},
-	},
-}
-
 // TODO: Cache Auth tokens until they expire
 // TODO: Enable access to the ServiceCatalog
 func GetAuthToken(credentials Credentials) (AuthToken, error) {
@@ -91,7 +85,7 @@ func GetAuthToken(credentials Credentials) (AuthToken, error) {
 	req.Header.Set("Content-type", "application/json")
 
 	// Request
-	resp, err := client.Do(req)
+	resp, err := rackspace.Client.Do(req)
 	if err != nil {
 		return AuthToken{}, err
 	}
