@@ -1,13 +1,13 @@
 package cloudDNS
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
 	rackspace "github.com/ghthor/gorackspace"
 	"github.com/ghthor/gorackspace/auth"
-	"net/http"
-	"errors"
-	"encoding/json"
 	"io/ioutil"
-	"fmt"
+	"net/http"
 )
 
 const Version = "1.0"
@@ -34,12 +34,12 @@ type (
 		Domains      []Domain         `json:"domains"`
 		Links        []DomainListLink `json:"links"`
 		TotalEntries int              `json:"totalEntries"`
-		rawJson		string
+		rawJson      string
 	}
 )
 
 func DomainList(a *auth.Auth) ([]Domain, error) {
-	req, _ := http.NewRequest("GET", a.ServiceCatalog.CloudDNS[0].PublicURL + "/domains", nil)
+	req, _ := http.NewRequest("GET", a.ServiceCatalog.CloudDNS[0].PublicURL+"/domains", nil)
 
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("X-Auth-Token", a.AuthToken.Id)
