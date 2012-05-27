@@ -69,8 +69,8 @@ func ListRecords(session rackspace.AuthSession, domain Domain) ([]Record, error)
 	return recordListResponse.Records, nil
 }
 
-func AddRecord(session rackspace.AuthSession, domain Domain, newRecord Record) (*rackspace.JobStatus, error) {
-	recordList := RecordList{[]Record{newRecord}}
+func AddRecords(session rackspace.AuthSession, domain Domain, records []Record) (*rackspace.JobStatus, error) {
+	recordList := RecordList{records}
 	recordListJson, err := json.Marshal(recordList)
 	if err != nil {
 		return nil, err
@@ -106,4 +106,8 @@ func AddRecord(session rackspace.AuthSession, domain Domain, newRecord Record) (
 	}
 
 	return jobStatus, nil
+}
+
+func AddRecord(session rackspace.AuthSession, domain Domain, newRecord Record) (*rackspace.JobStatus, error) {
+	return AddRecords(session, domain, []Record{newRecord})
 }
