@@ -69,3 +69,56 @@ func DomainList(a *auth.Auth) ([]Domain, error) {
 
 	return domainListResponse.Domains, nil
 }
+
+type (
+	Record struct {
+		Name     string `json:"name"`
+		Id       string `json:"id"`
+		Type     string `json:"type"`
+		Data     string `json:"data"`
+		Updated  string `json:"updated"`
+		Created  string `json:"created"`
+		TTL      int    `json:"ttl"`
+		Comment  string `json:"comment"`
+		Priority int    `json:"priority"`
+	}
+
+	RecordListResponse struct {
+		Records      []Record `json:"records"`
+		TotalEntries int      `json:"totalEntries"`
+		rawJson      string
+	}
+)
+
+func RecordList(a *auth.Auth, domain Domain) ([]Record, error) {
+	reqUrl := fmt.Sprintf("%s/domains/%d/records", a.ServiceCatalog.CloudDNS[0].PublicURL, domain.Id)
+	req, _ := http.NewRequest("GET", reqUrl, nil)
+
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("X-Auth-Token", a.AuthToken.Id)
+
+	resp, err := rackspace.Client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	responseBody, _ := ioutil.ReadAll(resp.Body)
+
+	switch resp.StatusCode {
+	default:
+		fallthrough
+	case 401, 403, 400, 500, 503:
+		return nil, errors.New(fmt.Sprintf("%s", responseBody))
+	case 200, 203:
+	}
+
+	recordListResponse := &RecordListResponse{rawJson: string(responseBody)}
+
+	// Parse Response Body
+	err = json.Unmarshal(responseBody, recordListResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	return recordListResponse.Records, nil
+}
