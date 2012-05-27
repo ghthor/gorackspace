@@ -18,11 +18,11 @@ type (
 	}
 )
 
-func JobStatusQuery(authToken string, jobStatus *JobStatus) (*JobStatus, error) {
+func JobStatusQuery(session AuthSession, jobStatus *JobStatus) (*JobStatus, error) {
 	req, _ := http.NewRequest("GET", jobStatus.CallbackURL, nil)
 
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("X-Auth-Token", authToken)
+	req.Header.Set("X-Auth-Token", session.Id())
 
 	resp, err := Client.Do(req)
 	if err != nil {
@@ -48,7 +48,7 @@ func JobStatusQuery(authToken string, jobStatus *JobStatus) (*JobStatus, error) 
 	return jobStatus, nil
 }
 
-func JobStatusMonitor(authToken string, jobStatus JobStatus, delay time.Duration) chan JobStatus {
+func JobStatusMonitor(session AuthSession, jobStatus JobStatus, delay time.Duration) chan JobStatus {
 	status := make(chan JobStatus)
 
 	go func() {
@@ -64,7 +64,7 @@ func JobStatusMonitor(authToken string, jobStatus JobStatus, delay time.Duration
 		// Start the Polling Loop
 		for {
 			// TODO: Identify and Gracefully handle all errors
-			_, err := JobStatusQuery(authToken, &jobStatus)
+			_, err := JobStatusQuery(session, &jobStatus)
 			if err != nil {
 				log.Println(err)
 			}

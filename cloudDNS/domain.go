@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	rackspace "github.com/ghthor/gorackspace"
-	"github.com/ghthor/gorackspace/auth"
 	"io/ioutil"
 	"net/http"
 )
@@ -39,13 +38,14 @@ type (
 	}
 )
 
-func DomainList(a *auth.Auth) ([]Domain, error) {
-	req, _ := http.NewRequest("GET", a.ServiceCatalog.CloudDNS[0].PublicURL+"/domains", nil)
+func DomainList(session rackspace.AuthSession) ([]Domain, error) {
+	// TODO: Inspect the Catalog to ensure this session has CloudDNS ability
+	req, _ := http.NewRequest("GET", session.ServiceCatalog().CloudDNS[0].PublicURL+"/domains", nil)
 
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("X-Auth-Token", a.AuthToken.Id)
+	req.Header.Set("X-Auth-Token", session.Id())
 
-	resp, err := rackspace.Client.Do(req)
+	resp, err := session.Client().Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -96,14 +96,15 @@ type (
 	}
 )
 
-func ListRecords(a *auth.Auth, domain Domain) ([]Record, error) {
-	reqUrl := fmt.Sprintf("%s/domains/%d/records", a.ServiceCatalog.CloudDNS[0].PublicURL, domain.Id)
+func ListRecords(session rackspace.AuthSession, domain Domain) ([]Record, error) {
+	// TODO: Inspect the Catalog to ensure this session has CloudDNS ability
+	reqUrl := fmt.Sprintf("%s/domains/%d/records", session.ServiceCatalog().CloudDNS[0].PublicURL, domain.Id)
 	req, _ := http.NewRequest("GET", reqUrl, nil)
 
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("X-Auth-Token", a.AuthToken.Id)
+	req.Header.Set("X-Auth-Token", session.Id())
 
-	resp, err := rackspace.Client.Do(req)
+	resp, err := session.Client().Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -129,21 +130,22 @@ func ListRecords(a *auth.Auth, domain Domain) ([]Record, error) {
 	return recordListResponse.Records, nil
 }
 
-func AddRecord(a *auth.Auth, domain Domain, newRecord Record) (*rackspace.JobStatus, error) {
+func AddRecord(session rackspace.AuthSession, domain Domain, newRecord Record) (*rackspace.JobStatus, error) {
 	recordList := RecordList{[]Record{newRecord}}
 	recordListJson, err := json.Marshal(recordList)
 	if err != nil {
 		return nil, err
 	}
 
-	reqUrl := fmt.Sprintf("%s/domains/%d/records", a.ServiceCatalog.CloudDNS[0].PublicURL, domain.Id)
+	// TODO: Inspect the Catalog to ensure this session has CloudDNS ability
+	reqUrl := fmt.Sprintf("%s/domains/%d/records", session.ServiceCatalog().CloudDNS[0].PublicURL, domain.Id)
 	req, _ := http.NewRequest("POST", reqUrl, bytes.NewBuffer(recordListJson))
 
 	req.Header.Set("Content-type", "application/json")
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("X-Auth-Token", a.AuthToken.Id)
+	req.Header.Set("X-Auth-Token", session.Id())
 
-	resp, err := rackspace.Client.Do(req)
+	resp, err := session.Client().Do(req)
 	if err != nil {
 		return nil, err
 	}

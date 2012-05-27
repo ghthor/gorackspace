@@ -28,28 +28,9 @@ type (
 		Expires string `json:"expires"`
 	}
 
-	Service struct {
-		Region      string `json:"region"`
-		V1Default   bool   `json:"v1Default"`
-		PublicURL   string `json:"publicURL"`
-		InternalURL string `json:"internalURL"`
-	}
-
-	ServiceCatalog struct {
-		CloudDNS           []Service `json:"cloudDNS"`
-		CloudDatabases     []Service `json:"cloudDatabases"`
-		CloudFiles         []Service `json:"cloudFiles"`
-		CloudFilesCDN      []Service `json:"cloudFilesCDN"`
-		CloudLoadBalancers []Service `json:"cloudLoadBalancers"`
-		CloudMonitoring    []Service `json:"cloudMonitoring"`
-		CloudServers       []Service `json:"cloudServers"`
-		// TODO: See if this should be removed
-		CloudServersOpenStack []Service `json:"cloudServersOpenStack"`
-	}
-
 	Auth struct {
-		AuthToken      AuthToken      `json:"token"`
-		ServiceCatalog ServiceCatalog `json:"serviceCatalog"`
+		AuthToken      AuthToken                `json:"token"`
+		ServiceCatalog rackspace.ServiceCatalog `json:"serviceCatalog"`
 	}
 
 	AuthResponse struct {
@@ -72,8 +53,35 @@ func (a AuthFaultError) Error() string {
 	return fmt.Sprintf("%i: %s", a.Code, a.Response)
 }
 
+// An implementation of the gorackspace.AuthSession interface
+type AuthSession struct {
+	client         *http.Client
+	authToken      AuthToken
+	serviceCatalog rackspace.ServiceCatalog
+}
+
+func (a *AuthSession) String() string {
+	return fmt.Sprintf("Session-Id: %s\tCatalog: %s", a.authToken.Id, a.serviceCatalog)
+}
+
+func (a *AuthSession) Client() *http.Client {
+	return a.client
+}
+
+func (a *AuthSession) Id() string {
+	return a.authToken.Id
+}
+
+func (a *AuthSession) Expires() string {
+	return a.authToken.Expires
+}
+
+func (a *AuthSession) ServiceCatalog() rackspace.ServiceCatalog {
+	return a.serviceCatalog
+}
+
 // TODO: Cache Auth tokens until they expire
-func Authenticate(credentials Credentials) (*Auth, error) {
+func Authenticate(credentials Credentials) (rackspace.AuthSession, error) {
 	credsJson, err := json.Marshal(AuthRequest{credentials})
 	if err != nil {
 		return nil, err
@@ -107,5 +115,11 @@ func Authenticate(credentials Credentials) (*Auth, error) {
 		return nil, err
 	}
 
-	return &authResponse.Auth, nil
+	authSession := &AuthSession{
+		client:         rackspace.Client,
+		authToken:      authResponse.Auth.AuthToken,
+		serviceCatalog: authResponse.Auth.ServiceCatalog,
+	}
+
+	return authSession, nil
 }
