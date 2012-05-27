@@ -111,3 +111,50 @@ func AddRecords(session rackspace.AuthSession, domain Domain, records []Record) 
 func AddRecord(session rackspace.AuthSession, domain Domain, newRecord Record) (*rackspace.JobStatus, error) {
 	return AddRecords(session, domain, []Record{newRecord})
 }
+
+func UpdateRecords(session rackspace.AuthSession, domain Domain, records []Record) (*rackspace.JobStatus, error) {
+	recordList := RecordList{records}
+	recordListJson, err := json.Marshal(recordList)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: Inspect the Catalog to ensure this session has CloudDNS ability
+	reqUrl := fmt.Sprintf("%s/domains/%d/records", session.ServiceCatalog().CloudDNS[0].PublicURL, domain.Id)
+	req, _ := http.NewRequest("PUT", reqUrl, bytes.NewBuffer(recordListJson))
+
+	req.Header.Set("Content-type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("X-Auth-Token", session.Id())
+
+	resp, err := session.Client().Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	responseBody, _ := ioutil.ReadAll(resp.Body)
+
+	switch resp.StatusCode {
+	default:
+		fallthrough
+	case 400, 401, 404, 413, 500, 503:
+		return nil, errors.New(fmt.Sprintf("%s", responseBody))
+	case 200, 202:
+	}
+
+	jobStatus := &rackspace.JobStatus{}
+	err = json.Unmarshal(responseBody, jobStatus)
+	if err != nil {
+		return nil, err
+	}
+
+	return jobStatus, nil
+}
+
+func UpdateRecord(session rackspace.AuthSession, domain Domain, record Record) (*rackspace.JobStatus, error) {
+	if record.Id == "" || record.Name == "" {
+		return nil, errors.New(fmt.Sprintf("Invalid Record: %s", record))
+	}
+
+	return UpdateRecords(session, domain, []Record{record})
+}
